@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fase 1d — Análisis Bivariante · Antigravity</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base:     #07090F;
+      --bg-surface:  #0D1019;
+      --bg-card:     #111521;
+      --border-dim:  rgba(255,255,255,0.05);
+      --border-def:  rgba(255,255,255,0.08);
+      --border-str:  rgba(255,255,255,0.13);
+      --txt-1: #E8ECFF;
+      --txt-2: #8890B0;
+      --txt-3: #3A4066;
+
+      --blue:    #4A9EFF;
+      --blue-d:  #1A3560;
+      --blue-g:  rgba(74,158,255,0.15);
+      --green:   #22D3A0;
+      --green-d: #0F2E22;
+      --green-g: rgba(34,211,160,0.14);
+      --violet:  #9B7FFF;
+      --violet-d:#1C1545;
+      --violet-g:rgba(155,127,255,0.14);
+      --amber:   #FFAA47;
+      --amber-d: #2E1E08;
+      --amber-g: rgba(255,170,71,0.13);
+
+      --mean: #FF6B47;
+      --med:  #22D3C0;
+
+      --r-sm: 6px; --r-md: 10px; --r-lg: 16px;
+      --f-text: 'Inter', system-ui, sans-serif;
+      --f-mono: 'JetBrains Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--f-text);
+      background: var(--bg-base);
+      color: var(--txt-1);
+      min-height: 100vh;
+      padding: 2.5rem 1.5rem;
+      background-image: radial-gradient(rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 22px 22px;
+    }
+
+    .wrap { max-width: 820px; margin: 0 auto; }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 4px 11px; margin-bottom: 14px;
+      background: rgba(74,158,255,0.07);
+      border: 1px solid rgba(74,158,255,0.22);
+      border-radius: 99px;
+      font: 500 10.5px/1 var(--f-mono);
+      color: var(--blue); letter-spacing: .06em; text-transform: uppercase;
+    }
+    .badge::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--blue); box-shadow: 0 0 7px var(--blue);
+      animation: blink 2.2s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    .hdr-title { font-size: 22px; font-weight: 600; letter-spacing: -.025em; margin-bottom: 5px; }
+    .hdr-sub   { font-size: 13px; color: var(--txt-2); margin-bottom: 2rem; }
+
+    /* TABS */
+    .tabs {
+      display: flex; gap: 5px; flex-wrap: wrap;
+      margin: 0 0 1.6rem;
+      padding: 4px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-def);
+      border-radius: var(--r-lg);
+      width: fit-content;
+    }
+    .tab {
+      padding: 7px 18px; cursor: pointer;
+      font: 500 12.5px/1 var(--f-text);
+      border: 1px solid transparent;
+      border-radius: var(--r-md);
+      background: transparent;
+      color: var(--txt-2);
+      transition: all .2s;
+      user-select: none;
+    }
+    .tab:hover:not(.active) { color: var(--txt-1); background: var(--border-dim); }
+    .tab[data-t="origen"].active { background: var(--bg-card); color: var(--blue);   border-color: rgba(74,158,255,.3); }
+    .tab[data-t="deberes"].active{ background: var(--bg-card); color: var(--green);  border-color: rgba(34,211,160,.3); }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* SECTION TITLE */
+    .sec-title {
+      font-size: 13px; font-weight: 500; color: var(--txt-2);
+      text-transform: uppercase; letter-spacing: .07em;
+      margin-bottom: 1rem;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .sec-title::after { content:''; flex:1; height:1px; background:var(--border-def); }
+
+    /* STATS GRID */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.5rem; }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-def);
+      border-radius: var(--r-lg);
+      padding: 16px 18px;
+    }
+    .stat-card.blue  { border-top: 2px solid var(--blue); }
+    .stat-card.green { border-top: 2px solid var(--green); }
+    .stat-card.violet{ border-top: 2px solid var(--violet); }
+    .stat-card.amber { border-top: 2px solid var(--amber); }
+
+    .sc-label { font: 500 10px/1 var(--f-mono); color: var(--txt-2); text-transform: uppercase; letter-spacing:.06em; margin-bottom: 10px; }
+    .sc-rows { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; font-size: 12.5px; }
+    .sc-key { color: var(--txt-2); }
+    .sc-val { color: var(--txt-1); font-weight: 500; font-family: var(--f-mono); font-size: 12px; }
+    .sc-val.hl-blue   { color: var(--blue); }
+    .sc-val.hl-green  { color: var(--green); }
+    .sc-val.hl-violet { color: var(--violet); }
+    .sc-val.hl-amber  { color: var(--amber); }
+
+    /* BOXPLOT SVG CARD */
+    .box-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-def);
+      border-radius: var(--r-lg);
+      padding: 20px 24px;
+      margin-bottom: 1.5rem;
+    }
+    .box-card-title { font-size: 13px; font-weight: 500; color: var(--txt-2); margin-bottom: 16px; }
+
+    /* LEGEND */
+    .legend { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 12px; }
+    .leg-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--txt-2); }
+    .leg-dot  { width: 8px; height: 8px; border-radius: 50%; }
+    .leg-line { width: 18px; height: 2px; border-radius: 1px; }
+    .leg-dash { width: 18px; height: 0; border-top: 2px dashed; }
+
+    /* CONCLUSIONS */
+    .concl-block {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-def);
+      border-radius: var(--r-lg);
+      padding: 16px 18px;
+      margin-bottom: 1rem;
+    }
+    .concl-title { font: 500 12px/1 var(--f-mono); color: var(--blue); text-transform: uppercase; letter-spacing:.05em; margin-bottom: 10px; }
+    .concl-item {
+      font-size: 13px; color: var(--txt-2); line-height: 1.6;
+      margin-bottom: 7px; padding-left: 18px; position: relative;
+      text-align: left; word-spacing: normal; word-break: normal; hyphens: none;
+    }
+    .concl-item::before {
+      content: '→'; color: var(--blue); font-weight: 600;
+      position: absolute; left: 0; top: 0;
+    }
+    .concl-item b { color: var(--txt-1); font-weight: 500; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="badge">Fase 1d</div>
+  <h1 class="hdr-title">Análisis Bivariante</h1>
+  <p class="hdr-sub">Nota Final en función del Origen (UFV / Externo) y de la realización de Deberes</p>
+
+  <div class="tabs">
+    <div class="tab active" data-t="origen" onclick="showPanel('origen',this)">Por Origen</div>
+    <div class="tab"        data-t="deberes" onclick="showPanel('deberes',this)">Por Deberes</div>
+  </div>
+
+  <!-- ══════════ PANEL ORIGEN ══════════ -->
+  <div class="panel active" id="panel-origen">
+
+    <p class="sec-title">Estadísticos por grupo</p>
+    <div class="stats-grid">
+      <div class="stat-card blue">
+        <p class="sc-label">UFV &nbsp;(n = 48)</p>
+        <div class="sc-rows">
+          <span class="sc-key">Media</span>     <span class="sc-val hl-blue">6.67</span>
+          <span class="sc-key">Mediana</span>   <span class="sc-val hl-blue">6.80</span>
+          <span class="sc-key">Q1 / Q3</span>  <span class="sc-val">4.45 / 8.30</span>
+          <span class="sc-key">IQR</span>       <span class="sc-val">3.85</span>
+          <span class="sc-key">Mín / Máx</span><span class="sc-val">3.0 / 10.0</span>
+          <span class="sc-key">Outliers</span> <span class="sc-val">Ninguno</span>
+        </div>
+      </div>
+      <div class="stat-card amber">
+        <p class="sc-label">Externo &nbsp;(n = 52)</p>
+        <div class="sc-rows">
+          <span class="sc-key">Media</span>     <span class="sc-val hl-amber">3.95</span>
+          <span class="sc-key">Mediana</span>   <span class="sc-val hl-amber">3.65</span>
+          <span class="sc-key">Q1 / Q3</span>  <span class="sc-val">2.68 / 5.35</span>
+          <span class="sc-key">IQR</span>       <span class="sc-val">2.68</span>
+          <span class="sc-key">Mín / Máx</span><span class="sc-val">0.1 / 8.0</span>
+          <span class="sc-key">Outliers</span> <span class="sc-val">Ninguno</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="sec-title">Boxplot comparativo</p>
+    <div class="box-card">
+      <p class="box-card-title">Nota Final — UFV vs Externo</p>
+      <svg id="svg-origen" viewBox="0 0 700 240" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;"></svg>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:var(--blue)"></div> UFV</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--amber)"></div> Externo</div>
+        <div class="leg-item"><div class="leg-dash" style="border-color:var(--mean)"></div> Media</div>
+        <div class="leg-item"><div class="leg-line" style="background:var(--med)"></div> Mediana</div>
+      </div>
+    </div>
+
+    <div class="concl-block">
+      <p class="concl-title">Conclusiones</p>
+      <div class="concl-item">La media UFV (6.67) supera en 2.72 puntos a la de externos (3.95). Diferencia muy relevante para una escala de 0–10.</div>
+      <div class="concl-item">Las cajas no se solapan apenas: la mediana UFV (6.80) está por encima del Q3 externo (5.35). Esto anticipa que el contraste de medias de la Fase 2 será significativo.</div>
+      <div class="concl-item">Los alumnos externos tienen una caja más estrecha (IQR = 2.68) y concentrada en notas bajas. Los UFV presentan mayor dispersión (IQR = 3.85) con notas más altas.</div>
+      <div class="concl-item">Ningún grupo tiene outliers → los datos son limpios y coherentes.</div>
+    </div>
+  </div>
+
+  <!-- ══════════ PANEL DEBERES ══════════ -->
+  <div class="panel" id="panel-deberes">
+
+    <p class="sec-title">Estadísticos por grupo</p>
+    <div class="stats-grid">
+      <div class="stat-card green">
+        <p class="sc-label">Con Deberes &nbsp;(n = 50)</p>
+        <div class="sc-rows">
+          <span class="sc-key">Media</span>     <span class="sc-val hl-green">5.15</span>
+          <span class="sc-key">Mediana</span>   <span class="sc-val hl-green">4.60</span>
+          <span class="sc-key">Q1 / Q3</span>  <span class="sc-val">3.45 / 7.25</span>
+          <span class="sc-key">IQR</span>       <span class="sc-val">3.80</span>
+          <span class="sc-key">Mín / Máx</span><span class="sc-val">0.1 / 10.0</span>
+          <span class="sc-key">Outliers</span> <span class="sc-val">Ninguno</span>
+        </div>
+      </div>
+      <div class="stat-card violet">
+        <p class="sc-label">Sin Deberes &nbsp;(n = 50)</p>
+        <div class="sc-rows">
+          <span class="sc-key">Media</span>     <span class="sc-val hl-violet">5.36</span>
+          <span class="sc-key">Mediana</span>   <span class="sc-val hl-violet">5.40</span>
+          <span class="sc-key">Q1 / Q3</span>  <span class="sc-val">3.20 / 7.28</span>
+          <span class="sc-key">IQR</span>       <span class="sc-val">4.08</span>
+          <span class="sc-key">Mín / Máx</span><span class="sc-val">0.1 / 10.0</span>
+          <span class="sc-key">Outliers</span> <span class="sc-val">Ninguno</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="sec-title">Boxplot comparativo</p>
+    <div class="box-card">
+      <p class="box-card-title">Nota Final — Con Deberes vs Sin Deberes</p>
+      <svg id="svg-deberes" viewBox="0 0 700 240" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;"></svg>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:var(--green)"></div> Con Deberes</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--violet)"></div> Sin Deberes</div>
+        <div class="leg-item"><div class="leg-dash" style="border-color:var(--mean)"></div> Media</div>
+        <div class="leg-item"><div class="leg-line" style="background:var(--med)"></div> Mediana</div>
+      </div>
+    </div>
+
+    <div class="concl-block">
+      <p class="concl-title">Conclusiones</p>
+      <div class="concl-item">Las medias son prácticamente idénticas: Con deberes = <b>5.15</b> vs Sin deberes = <b>5.36</b>. Diferencia de solo 0.21 puntos.</div>
+      <div class="concl-item">Los boxplots se solapan casi completamente. Visualmente no hay separación entre grupos: hacer deberes no parece influir en la nota en esta muestra.</div>
+      <div class="concl-item">Ambas medianas son similares (4.60 vs 5.40) y los IQR también (3.80 vs 4.08). Las distribuciones son estructuralmente casi idénticas.</div>
+      <div class="concl-item">Resultado contraintuitivo: la variable Origen (UFV/Externo) explica mucho mejor las notas que el hábito de hacer deberes.</div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+/* ── helpers ── */
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs={}) {
+  const e = document.createElementNS(SVG_NS, tag);
+  for (const [k,v] of Object.entries(attrs)) e.setAttribute(k,v);
+  return e;
+}
+
+/* ── draw a horizontal boxplot row ── */
+/* scale: 0..10 → x: LEFT..RIGHT */
+const LEFT=80, RIGHT=640, TOP_OFFSET=0;
+function scaleX(v){ return LEFT + (v/10)*(RIGHT-LEFT); }
+
+function drawBoxplot(svgId, groups) {
+  const svg = document.getElementById(svgId);
+  const rowH = 110; // taller rows so annotations have room
+  const totalH = groups.length * rowH + 50;
+  svg.setAttribute('viewBox', `0 0 700 ${totalH}`);
+
+  const axisY = totalH - 24;
+  svg.appendChild(el('line',{x1:LEFT,y1:axisY,x2:RIGHT,y2:axisY,stroke:'rgba(255,255,255,0.08)','stroke-width':1}));
+  for(let v=0;v<=10;v++){
+    const x = scaleX(v);
+    svg.appendChild(el('line',{x1:x,y1:10,x2:x,y2:axisY,stroke:'rgba(255,255,255,0.04)','stroke-width':1}));
+    const t = el('text',{x,y:axisY+14,'font-size':'10','text-anchor':'middle',fill:'rgba(255,255,255,0.3)','font-family':'JetBrains Mono,monospace'});
+    t.textContent = v;
+    svg.appendChild(t);
+  }
+
+  groups.forEach((g, i) => {
+    const cy = 44 + i*rowH + rowH/2 - 10;
+    const bh = 28;
+    const color = g.color;
+    const colorFill = g.colorFill;
+    const boxTop = cy - bh/2;
+
+    // group label
+    const lbl = el('text',{x:LEFT-8,y:cy+5,'font-size':'12','text-anchor':'end',fill:color,'font-family':'Inter,sans-serif','font-weight':'500'});
+    lbl.textContent = g.label;
+    svg.appendChild(lbl);
+    const n = el('text',{x:LEFT-8,y:cy+19,'font-size':'10','text-anchor':'end',fill:'rgba(255,255,255,0.3)','font-family':'Inter,sans-serif'});
+    n.textContent = `n=${g.n}`;
+    svg.appendChild(n);
+
+    // whiskers
+    svg.appendChild(el('line',{x1:scaleX(g.wlo),y1:cy,x2:scaleX(g.q1),y2:cy,stroke:color,'stroke-width':1.5,'stroke-dasharray':'3,2'}));
+    svg.appendChild(el('line',{x1:scaleX(g.wlo),y1:cy-9,x2:scaleX(g.wlo),y2:cy+9,stroke:color,'stroke-width':1.5}));
+    svg.appendChild(el('line',{x1:scaleX(g.q3),y1:cy,x2:scaleX(g.whi),y2:cy,stroke:color,'stroke-width':1.5,'stroke-dasharray':'3,2'}));
+    svg.appendChild(el('line',{x1:scaleX(g.whi),y1:cy-9,x2:scaleX(g.whi),y2:cy+9,stroke:color,'stroke-width':1.5}));
+
+    // IQR box
+    const bx = scaleX(g.q1), bw = scaleX(g.q3)-scaleX(g.q1);
+    svg.appendChild(el('rect',{x:bx,y:boxTop,width:bw,height:bh,fill:colorFill,stroke:color,'stroke-width':1.5,rx:'4'}));
+
+    // median line
+    svg.appendChild(el('line',{x1:scaleX(g.med),y1:boxTop,x2:scaleX(g.med),y2:boxTop+bh,stroke:'#22D3C0','stroke-width':2.5}));
+
+    // mean dashed line (slightly taller than box)
+    svg.appendChild(el('line',{x1:scaleX(g.mean),y1:boxTop-5,x2:scaleX(g.mean),y2:boxTop+bh+5,stroke:'#FF6B47','stroke-width':1.5,'stroke-dasharray':'4,3'}));
+
+    // annotations — two rows above box to avoid collisions
+    // Row A (higher): Q1, Q3, mean
+    // Row B (lower):  Me
+    function annA(v, label, fillColor){
+      const t = el('text',{x:scaleX(v),y:boxTop-18,'font-size':'9','text-anchor':'middle',fill: fillColor||'rgba(255,255,255,0.45)','font-family':'JetBrains Mono,monospace'});
+      t.textContent=label; svg.appendChild(t);
+    }
+    function annB(v, label, fillColor){
+      const t = el('text',{x:scaleX(v),y:boxTop-7,'font-size':'9','text-anchor':'middle',fill: fillColor||'rgba(255,255,255,0.45)','font-family':'JetBrains Mono,monospace'});
+      t.textContent=label; svg.appendChild(t);
+    }
+    annA(g.q1,  `Q1=${g.q1}`);
+    annA(g.q3,  `Q3=${g.q3}`);
+    annA(g.mean, `x̄=${g.mean}`, '#FF6B47');
+    annB(g.med, `Me=${g.med}`, '#22D3C0');
+  });
+}
+
+/* ── data ── */
+drawBoxplot('svg-origen', [
+  { label:'UFV',     n:48, wlo:3.0, q1:4.45, med:6.80, mean:6.67, q3:8.30, whi:10.0,
+    color:'#4A9EFF', colorFill:'rgba(74,158,255,0.15)' },
+  { label:'Externo', n:52, wlo:0.1, q1:2.68, med:3.65, mean:3.95, q3:5.35, whi:8.0,
+    color:'#FFAA47', colorFill:'rgba(255,170,71,0.13)' },
+]);
+
+drawBoxplot('svg-deberes', [
+  { label:'Con deberes', n:50, wlo:0.1, q1:3.45, med:4.60, mean:5.15, q3:7.25, whi:10.0,
+    color:'#22D3A0', colorFill:'rgba(34,211,160,0.13)' },
+  { label:'Sin deberes', n:50, wlo:0.1, q1:3.20, med:5.40, mean:5.36, q3:7.28, whi:10.0,
+    color:'#9B7FFF', colorFill:'rgba(155,127,255,0.13)' },
+]);
+
+/* ── tabs ── */
+function showPanel(id, tabEl) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  tabEl.classList.add('active');
+}
+</script>
+</body>
+</html>

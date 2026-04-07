@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fase 1b — Análisis Estadístico · Antigravity</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ── TOKENS ── */
+    :root {
+      --bg-base:     #07090F;
+      --bg-surface:  #0D1019;
+      --bg-card:     #111521;
+      --border-dim:  rgba(255,255,255,0.05);
+      --border-def:  rgba(255,255,255,0.08);
+      --border-str:  rgba(255,255,255,0.13);
+      --txt-1: #E8ECFF;
+      --txt-2: #8890B0;
+      --txt-3: #3A4066;
+      --txt-4: #22273D;
+
+      --blue:   #4A9EFF;
+      --blue-d: #1A3560;
+      --blue-g: rgba(74,158,255,0.18);
+      --green:  #22D3A0;
+      --green-d:#0F2E22;
+      --green-g:rgba(34,211,160,0.16);
+      --violet: #9B7FFF;
+      --violet-d:#1C1545;
+      --violet-g:rgba(155,127,255,0.16);
+
+      --mean:   #FF6B47;
+      --med:    #22D3C0;
+
+      --r-sm: 6px; --r-md: 10px; --r-lg: 16px;
+      --f-text: 'Inter', system-ui, sans-serif;
+      --f-mono: 'JetBrains Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--f-text);
+      background: var(--bg-base);
+      color: var(--txt-1);
+      min-height: 100vh;
+      padding: 2.5rem 1.5rem;
+      background-image: radial-gradient(rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 22px 22px;
+    }
+
+    .wrap { max-width: 820px; margin: 0 auto; }
+
+    /* ── HEADER ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 4px 11px; margin-bottom: 14px;
+      background: rgba(74,158,255,0.07);
+      border: 1px solid rgba(74,158,255,0.22);
+      border-radius: 99px;
+      font: 500 10.5px/1 var(--f-mono);
+      color: var(--blue); letter-spacing: .06em; text-transform: uppercase;
+    }
+    .badge::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--blue); box-shadow: 0 0 7px var(--blue);
+      animation: blink 2.2s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    .hdr-title { font-size: 22px; font-weight: 600; letter-spacing: -.025em; margin-bottom: 5px; }
+    .hdr-sub   { font-size: 13px; color: var(--txt-2); }
+
+    /* ── TABS ── */
+    .tabs {
+      display: flex; gap: 5px; flex-wrap: wrap;
+      margin: 1.8rem 0 1.4rem;
+      padding: 4px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-def);
+      border-radius: var(--r-lg);
+      width: fit-content;
+    }
+    .tab {
+      padding: 7px 16px; cursor: pointer;
+      font: 500 12.5px/1 var(--f-text);
+      border: 1px solid transparent;
+      border-radius: var(--r-md);
+      background: transparent;
+      color: var(--txt-2);
+      transition: all .2s;
+      user-select: none;
+    }
+    .tab:hover:not(.active) { color: var(--txt-1); background: var(--border-dim); }
+    .tab.active { background: var(--bg-card); color: var(--txt-1); border-color: var(--border-str); box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+    .tab[data-t="notas"].active   { color: var(--blue);   border-color: rgba(74,158,255,.3); }
+    .tab[data-t="clases"].active  { color: var(--green);  border-color: rgba(34,211,160,.3); }
+    .tab[data-t="edad"].active    { color: var(--violet); border-color: rgba(155,127,255,.3); }
+
+    /* ── SECTIONS ── */
+    .section { display: none; }
+    .section.active { display: block; animation: up .25s ease; }
+    @keyframes up { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:none} }
+
+    /* ── CARDS ── */
+    .card {
+      position: relative; overflow: hidden;
+      background: var(--bg-card);
+      border: 1px solid var(--border-def);
+      border-radius: var(--r-lg);
+      padding: 20px 22px 14px;
+      margin-bottom: 12px;
+    }
+    .card::before {
+      content: '';
+      position: absolute; inset: 0 0 auto 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.07), transparent);
+    }
+    .card-label {
+      font: 600 10.5px/1 var(--f-mono);
+      text-transform: uppercase; letter-spacing: .08em;
+      color: var(--txt-3); margin-bottom: 16px;
+    }
+    svg { width: 100%; display: block; }
+
+    /* ── LEGEND ── */
+    .legend {
+      display: flex; gap: 18px; flex-wrap: wrap;
+      font: 400 11px/1 var(--f-mono);
+      margin-top: 12px; padding-top: 12px;
+      border-top: 1px solid var(--border-dim);
+    }
+    .li { display: flex; align-items: center; gap: 6px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dash { width: 16px; height: 2px; border-radius: 1px; flex-shrink: 0; }
+
+    /* ── EXPLAIN ── */
+    .explain {
+      font-size: 13px; line-height: 1.72;
+      color: var(--txt-2);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--r-md);
+      padding: 14px 18px;
+      margin-bottom: 6px;
+    }
+    .explain::before { content: '// '; font-family: var(--f-mono); color: var(--txt-4); font-size: 11px; }
+
+    /* ── SVG shared colours injected per section via CSS vars ── */
+    .grid-axis  { stroke: #1C2038; stroke-width: 1; }
+    .grid-dash  { stroke: #181C30; stroke-width: .5; stroke-dasharray: 3 4; }
+    .tick       { stroke: #2E3550; stroke-width: 1; }
+    .ax-lbl     { font: 10px var(--f-mono); fill: #3A4066; }
+    .no-out     { font: 11px var(--f-mono); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header style="margin-bottom:0">
+    <div class="badge">Fase 1b · Análisis Estadístico</div>
+    <h1 class="hdr-title">Histogramas &amp; Boxplots</h1>
+    <p class="hdr-sub">Distribución de variables · Nota de Estadística · Asistencia · Edad</p>
+  </header>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" data-t="notas"  onclick="show('notas',this)">Nota de Estadística</div>
+    <div class="tab"        data-t="clases" onclick="show('clases',this)">Asistencia a clase</div>
+    <div class="tab"        data-t="edad"   onclick="show('edad',this)">Edad</div>
+  </div>
+
+  <!-- ═══════════ NOTAS ═══════════ -->
+  <div class="section active" id="tab-notas">
+
+    <!-- Histograma notas -->
+    <div class="card">
+      <div class="card-label">Histograma — Nota de Estadística</div>
+      <svg viewBox="0 0 540 200">
+        <line class="grid-axis" x1="50" y1="20" x2="50" y2="165"/>
+        <line class="grid-axis" x1="50" y1="165" x2="535" y2="165"/>
+        <line class="grid-dash" x1="50" y1="130" x2="535" y2="130"/>
+        <line class="grid-dash" x1="50" y1="95"  x2="535" y2="95"/>
+        <line class="grid-dash" x1="50" y1="60"  x2="535" y2="60"/>
+        <line class="grid-dash" x1="50" y1="25"  x2="535" y2="25"/>
+
+        <text class="ax-lbl" x="44" y="168" text-anchor="end">0</text>
+        <text class="ax-lbl" x="44" y="133" text-anchor="end">5</text>
+        <text class="ax-lbl" x="44" y="98"  text-anchor="end">10</text>
+        <text class="ax-lbl" x="44" y="63"  text-anchor="end">15</text>
+        <text class="ax-lbl" x="44" y="28"  text-anchor="end">20</text>
+
+        <!-- bars — counts: 5 4 10 15 16 9 12 14 4 11 -->
+        <rect x="52"  y="130" width="46" height="35"  fill="#1E3A6E" rx="2"/>
+        <rect x="101" y="137" width="46" height="28"  fill="#1E3A6E" rx="2"/>
+        <rect x="150" y="95"  width="46" height="70"  fill="#234A8A" rx="2"/>
+        <rect x="199" y="60"  width="46" height="105" fill="#4A9EFF" rx="2" opacity=".85"/>
+        <rect x="248" y="53"  width="46" height="112" fill="#4A9EFF" rx="2"/>
+        <rect x="297" y="102" width="46" height="63"  fill="#234A8A" rx="2"/>
+        <rect x="346" y="81"  width="46" height="84"  fill="#234A8A" rx="2"/>
+        <rect x="395" y="67"  width="46" height="98"  fill="#4A9EFF" rx="2" opacity=".85"/>
+        <rect x="444" y="137" width="46" height="28"  fill="#1E3A6E" rx="2"/>
+        <rect x="493" y="88"  width="38" height="77"  fill="#234A8A" rx="2"/>
+
+        <!-- count labels -->
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#7AAFFF" x="75"  y="127">5</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#7AAFFF" x="124" y="134">4</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#7AAFFF" x="173" y="92">10</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#E8F3FF" x="222" y="57">15</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#E8F3FF" x="271" y="50">16</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#7AAFFF" x="320" y="99">9</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#7AAFFF" x="369" y="78">12</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#E8F3FF" x="418" y="64">14</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#7AAFFF" x="467" y="134">4</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#7AAFFF" x="512" y="85">11</text>
+
+        <!-- x labels -->
+        <text class="ax-lbl" text-anchor="middle" x="75"  y="180">0–1</text>
+        <text class="ax-lbl" text-anchor="middle" x="124" y="180">1–2</text>
+        <text class="ax-lbl" text-anchor="middle" x="173" y="180">2–3</text>
+        <text class="ax-lbl" text-anchor="middle" x="222" y="180">3–4</text>
+        <text class="ax-lbl" text-anchor="middle" x="271" y="180">4–5</text>
+        <text class="ax-lbl" text-anchor="middle" x="320" y="180">5–6</text>
+        <text class="ax-lbl" text-anchor="middle" x="369" y="180">6–7</text>
+        <text class="ax-lbl" text-anchor="middle" x="418" y="180">7–8</text>
+        <text class="ax-lbl" text-anchor="middle" x="467" y="180">8–9</text>
+        <text class="ax-lbl" text-anchor="middle" x="512" y="180">9–10</text>
+
+        <!-- mean line x̄ = 5.26 -->
+        <line x1="312" y1="20" x2="312" y2="165" stroke="#FF6B47" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <text x="316" y="33" font-size="10" font-family="JetBrains Mono,monospace" fill="#FF6B47"><tspan text-decoration="overline">x</tspan> = 5.26</text>
+
+        <!-- median line Me = 4.95 -->
+        <line x1="290" y1="20" x2="290" y2="165" stroke="#22D3C0" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <text x="285" y="33" text-anchor="end" font-size="10" font-family="JetBrains Mono,monospace" fill="#22D3C0">Me = 4.95</text>
+      </svg>
+
+      <div class="legend">
+        <span class="li"><span class="dot" style="background:#4A9EFF"></span><span style="color:#7AAFFF">Barras más altas (zona 3–5, 7–8)</span></span>
+        <span class="li"><span class="dash" style="background:#FF6B47"></span><span style="color:#FF6B47">Media 5.26</span></span>
+        <span class="li"><span class="dash" style="background:#22D3C0"></span><span style="color:#22D3C0">Mediana 4.95</span></span>
+      </div>
+    </div>
+
+    <!-- Boxplot notas -->
+    <div class="card">
+      <div class="card-label">Boxplot — Nota de Estadística</div>
+      <svg viewBox="0 0 540 110">
+        <line class="grid-axis" x1="60" y1="80" x2="510" y2="80"/>
+        <!-- ticks -->
+        <line class="tick" x1="60"  y1="76" x2="60"  y2="84"/>
+        <line class="tick" x1="105" y1="76" x2="105" y2="84"/>
+        <line class="tick" x1="150" y1="76" x2="150" y2="84"/>
+        <line class="tick" x1="195" y1="76" x2="195" y2="84"/>
+        <line class="tick" x1="240" y1="76" x2="240" y2="84"/>
+        <line class="tick" x1="285" y1="76" x2="285" y2="84"/>
+        <line class="tick" x1="330" y1="76" x2="330" y2="84"/>
+        <line class="tick" x1="375" y1="76" x2="375" y2="84"/>
+        <line class="tick" x1="420" y1="76" x2="420" y2="84"/>
+        <line class="tick" x1="465" y1="76" x2="465" y2="84"/>
+        <line class="tick" x1="510" y1="76" x2="510" y2="84"/>
+        <!-- labels 0..10 -->
+        <text class="ax-lbl" text-anchor="middle" x="60"  y="95">0</text>
+        <text class="ax-lbl" text-anchor="middle" x="105" y="95">1</text>
+        <text class="ax-lbl" text-anchor="middle" x="150" y="95">2</text>
+        <text class="ax-lbl" text-anchor="middle" x="195" y="95">3</text>
+        <text class="ax-lbl" text-anchor="middle" x="240" y="95">4</text>
+        <text class="ax-lbl" text-anchor="middle" x="285" y="95">5</text>
+        <text class="ax-lbl" text-anchor="middle" x="330" y="95">6</text>
+        <text class="ax-lbl" text-anchor="middle" x="375" y="95">7</text>
+        <text class="ax-lbl" text-anchor="middle" x="420" y="95">8</text>
+        <text class="ax-lbl" text-anchor="middle" x="465" y="95">9</text>
+        <text class="ax-lbl" text-anchor="middle" x="510" y="95">10</text>
+        <!-- whiskers: min=0.1→64.5, Q1=3.4→213, Q3=7.3→389, max=10→510 -->
+        <line x1="64"  y1="45" x2="213" y2="45" stroke="#2A4070" stroke-width="1.5"/>
+        <line x1="64"  y1="38" x2="64"  y2="52" stroke="#2A4070" stroke-width="1.5"/>
+        <line x1="389" y1="45" x2="510" y2="45" stroke="#2A4070" stroke-width="1.5"/>
+        <line x1="510" y1="38" x2="510" y2="52" stroke="#2A4070" stroke-width="1.5"/>
+        <!-- IQR box -->
+        <defs>
+          <linearGradient id="gN" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stop-color="#162844"/>
+            <stop offset="100%" stop-color="#0E1E36"/>
+          </linearGradient>
+        </defs>
+        <rect x="213" y="28" width="176" height="34" fill="url(#gN)" stroke="#4A9EFF" stroke-width="1.5" rx="3"/>
+        <!-- median line Me=4.95 → x=283 -->
+        <line x1="283" y1="28" x2="283" y2="62" stroke="#4A9EFF" stroke-width="2.5"/>
+        <!-- annotations -->
+        <text class="ax-lbl" text-anchor="middle" x="64"  y="22">mín 0.1</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" fill="#4A9EFF" text-anchor="middle" x="213" y="22">Q1=3.4</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" fill="#E8F3FF" text-anchor="middle" x="283" y="22">Me=4.95</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" fill="#4A9EFF" text-anchor="middle" x="389" y="22">Q3=7.3</text>
+        <text class="ax-lbl" text-anchor="middle" x="510" y="22">máx 10</text>
+        <text class="no-out" fill="#22D3A0" font-family="JetBrains Mono,monospace" text-anchor="middle" x="270" y="108">✓ Sin outliers — todos los datos dentro de los bigotes</text>
+      </svg>
+    </div>
+
+    <div class="explain">El histograma muestra una distribución bimodal: hay una "joroba" en suspensos (3–5) y otra en notables (7–8), con el pico 9–10 también elevado. Esto sugiere dos grupos claramente distintos (UFV y externos). La media (5.26) y mediana (4.95) son muy parecidas → distribución casi simétrica globalmente. No hay outliers estadísticos.</div>
+  </div>
+
+  <!-- ═══════════ CLASES ═══════════ -->
+  <div class="section" id="tab-clases">
+
+    <!-- Histograma clases -->
+    <div class="card">
+      <div class="card-label">Histograma — Asistencia a clase</div>
+      <svg viewBox="0 0 540 200">
+        <line class="grid-axis" x1="50" y1="20"  x2="50"  y2="165"/>
+        <line class="grid-axis" x1="50" y1="165" x2="535" y2="165"/>
+        <line class="grid-dash" x1="50" y1="130" x2="535" y2="130"/>
+        <line class="grid-dash" x1="50" y1="95"  x2="535" y2="95"/>
+        <line class="grid-dash" x1="50" y1="60"  x2="535" y2="60"/>
+        <text class="ax-lbl" x="44" y="168" text-anchor="end">0</text>
+        <text class="ax-lbl" x="44" y="133" text-anchor="end">5</text>
+        <text class="ax-lbl" x="44" y="98"  text-anchor="end">10</text>
+        <text class="ax-lbl" x="44" y="63"  text-anchor="end">15</text>
+        <!-- bars: 12 12 6 13 17 14 13 13 -->
+        <rect x="52"  y="81"  width="57" height="84"  fill="#1A4A3A" rx="2"/>
+        <rect x="112" y="81"  width="57" height="84"  fill="#1A4A3A" rx="2"/>
+        <rect x="172" y="123" width="57" height="42"  fill="#143526" rx="2"/>
+        <rect x="232" y="74"  width="57" height="91"  fill="#1C6048" rx="2"/>
+        <rect x="292" y="46"  width="57" height="119" fill="#22D3A0" rx="2"/>
+        <rect x="352" y="67"  width="57" height="98"  fill="#1A8060" rx="2"/>
+        <rect x="412" y="74"  width="57" height="91"  fill="#1C6048" rx="2"/>
+        <rect x="472" y="74"  width="57" height="91"  fill="#1C6048" rx="2"/>
+        <!-- count labels -->
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#5EEFBC" x="80"  y="78">12</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#5EEFBC" x="140" y="78">12</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#5EEFBC" x="200" y="120">6</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#5EEFBC" x="260" y="71">13</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#EAFFF8" x="320" y="43">17</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#5EEFBC" x="380" y="64">14</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#5EEFBC" x="440" y="71">13</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#5EEFBC" x="500" y="71">13</text>
+        <!-- x labels -->
+        <text class="ax-lbl" text-anchor="middle" x="80"  y="180">5–7</text>
+        <text class="ax-lbl" text-anchor="middle" x="140" y="180">7–9</text>
+        <text class="ax-lbl" text-anchor="middle" x="200" y="180">9–11</text>
+        <text class="ax-lbl" text-anchor="middle" x="260" y="180">11–13</text>
+        <text class="ax-lbl" text-anchor="middle" x="320" y="180">13–15</text>
+        <text class="ax-lbl" text-anchor="middle" x="380" y="180">15–17</text>
+        <text class="ax-lbl" text-anchor="middle" x="440" y="180">17–19</text>
+        <text class="ax-lbl" text-anchor="middle" x="500" y="180">19–21</text>
+      </svg>
+    </div>
+
+    <!-- Boxplot clases -->
+    <div class="card">
+      <div class="card-label">Boxplot — Asistencia a clase</div>
+      <svg viewBox="0 0 540 110">
+        <!-- 5..20 → 60..510, 1 unit = 30 px -->
+        <line class="grid-axis" x1="60" y1="80" x2="510" y2="80"/>
+        <text class="ax-lbl" text-anchor="middle" x="60"  y="95">5</text>
+        <text class="ax-lbl" text-anchor="middle" x="150" y="95">8</text>
+        <text class="ax-lbl" text-anchor="middle" x="240" y="95">11</text>
+        <text class="ax-lbl" text-anchor="middle" x="330" y="95">14</text>
+        <text class="ax-lbl" text-anchor="middle" x="420" y="95">17</text>
+        <text class="ax-lbl" text-anchor="middle" x="510" y="95">20</text>
+        <!-- min=5→60, Q1=9→180, med=13→300, Q3=17→420, max=20→510 -->
+        <line x1="60"  y1="45" x2="180" y2="45" stroke="#1A6045" stroke-width="1.5"/>
+        <line x1="60"  y1="38" x2="60"  y2="52" stroke="#1A6045" stroke-width="1.5"/>
+        <line x1="420" y1="45" x2="510" y2="45" stroke="#1A6045" stroke-width="1.5"/>
+        <line x1="510" y1="38" x2="510" y2="52" stroke="#1A6045" stroke-width="1.5"/>
+        <defs>
+          <linearGradient id="gC" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stop-color="#0C2A1E"/>
+            <stop offset="100%" stop-color="#081E16"/>
+          </linearGradient>
+        </defs>
+        <rect x="180" y="28" width="240" height="34" fill="url(#gC)" stroke="#22D3A0" stroke-width="1.5" rx="3"/>
+        <line x1="300" y1="28" x2="300" y2="62" stroke="#22D3A0" stroke-width="2.5"/>
+        <text class="ax-lbl" text-anchor="middle" x="60"  y="22">mín 5</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" fill="#22D3A0" text-anchor="middle" x="180" y="22">Q1=9</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" fill="#EAFFF8" text-anchor="middle" x="300" y="22">Me=13</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" fill="#22D3A0" text-anchor="middle" x="420" y="22">Q3=17</text>
+        <text class="ax-lbl" text-anchor="middle" x="510" y="22">máx 20</text>
+        <text class="no-out" fill="#22D3A0" font-family="JetBrains Mono,monospace" text-anchor="middle" x="270" y="108">✓ Sin outliers — distribución muy uniforme</text>
+      </svg>
+    </div>
+
+    <div class="explain">La asistencia está repartida de forma bastante uniforme entre 5 y 20 clases, con un ligero pico en 13–15. El boxplot es casi simétrico (la mediana está justo en el centro de la caja). No hay outliers. Conclusión: la asistencia varía pero no hay nadie con un comportamiento extremo.</div>
+  </div>
+
+  <!-- ═══════════ EDAD ═══════════ -->
+  <div class="section" id="tab-edad">
+
+    <!-- Histograma edad -->
+    <div class="card">
+      <div class="card-label">Histograma — Edad</div>
+      <svg viewBox="0 0 540 200">
+        <line class="grid-axis" x1="50" y1="20"  x2="50"  y2="165"/>
+        <line class="grid-axis" x1="50" y1="165" x2="535" y2="165"/>
+        <line class="grid-dash" x1="50" y1="130" x2="535" y2="130"/>
+        <line class="grid-dash" x1="50" y1="95"  x2="535" y2="95"/>
+        <line class="grid-dash" x1="50" y1="60"  x2="535" y2="60"/>
+        <text class="ax-lbl" x="44" y="168" text-anchor="end">0</text>
+        <text class="ax-lbl" x="44" y="133" text-anchor="end">5</text>
+        <text class="ax-lbl" x="44" y="98"  text-anchor="end">10</text>
+        <text class="ax-lbl" x="44" y="63"  text-anchor="end">15</text>
+        <!-- bars: 14 11 21 13 21 20 -->
+        <rect x="52"  y="67" width="78" height="98"  fill="#261B60" rx="2"/>
+        <rect x="133" y="88" width="78" height="77"  fill="#1D1448" rx="2"/>
+        <rect x="214" y="18" width="78" height="147" fill="#9B7FFF" rx="2"/>
+        <rect x="295" y="74" width="78" height="91"  fill="#261B60" rx="2"/>
+        <rect x="376" y="18" width="78" height="147" fill="#9B7FFF" rx="2"/>
+        <rect x="457" y="25" width="72" height="140" fill="#7A60E8" rx="2"/>
+        <!-- count labels -->
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#C4BCFF" x="91"  y="64">14</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#C4BCFF" x="172" y="85">11</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#F0EEFF" x="253" y="15">21</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#C4BCFF" x="334" y="71">13</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#F0EEFF" x="415" y="15">21</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle" fill="#F0EEFF" x="493" y="22">20</text>
+        <!-- x labels -->
+        <text class="ax-lbl" text-anchor="middle" x="91"  y="180">20</text>
+        <text class="ax-lbl" text-anchor="middle" x="172" y="180">21</text>
+        <text class="ax-lbl" text-anchor="middle" x="253" y="180">22</text>
+        <text class="ax-lbl" text-anchor="middle" x="334" y="180">23</text>
+        <text class="ax-lbl" text-anchor="middle" x="415" y="180">24</text>
+        <text class="ax-lbl" text-anchor="middle" x="493" y="180">25</text>
+      </svg>
+    </div>
+
+    <!-- Boxplot edad -->
+    <div class="card">
+      <div class="card-label">Boxplot — Edad</div>
+      <svg viewBox="0 0 540 110">
+        <!-- 20..25 → 60..510, 1 unit = 90 px -->
+        <line class="grid-axis" x1="60" y1="80" x2="510" y2="80"/>
+        <text class="ax-lbl" text-anchor="middle" x="60"  y="95">20</text>
+        <text class="ax-lbl" text-anchor="middle" x="150" y="95">21</text>
+        <text class="ax-lbl" text-anchor="middle" x="240" y="95">22</text>
+        <text class="ax-lbl" text-anchor="middle" x="330" y="95">23</text>
+        <text class="ax-lbl" text-anchor="middle" x="420" y="95">24</text>
+        <text class="ax-lbl" text-anchor="middle" x="510" y="95">25</text>
+        <!-- min=20→60, Q1=21.75→217.5, med=23→330, Q3=24→420, max=25→510 -->
+        <line x1="60"  y1="45" x2="218" y2="45" stroke="#3D2E90" stroke-width="1.5"/>
+        <line x1="60"  y1="38" x2="60"  y2="52" stroke="#3D2E90" stroke-width="1.5"/>
+        <line x1="420" y1="45" x2="510" y2="45" stroke="#3D2E90" stroke-width="1.5"/>
+        <line x1="510" y1="38" x2="510" y2="52" stroke="#3D2E90" stroke-width="1.5"/>
+        <defs>
+          <linearGradient id="gE" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stop-color="#1A1242"/>
+            <stop offset="100%" stop-color="#120C32"/>
+          </linearGradient>
+        </defs>
+        <rect x="218" y="28" width="202" height="34" fill="url(#gE)" stroke="#9B7FFF" stroke-width="1.5" rx="3"/>
+        <line x1="330" y1="28" x2="330" y2="62" stroke="#9B7FFF" stroke-width="2.5"/>
+        <text class="ax-lbl" text-anchor="middle" x="60"  y="22">mín 20</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" fill="#9B7FFF" text-anchor="middle" x="218" y="22">Q1=21.75</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" fill="#F0EEFF" text-anchor="middle" x="330" y="22">Me=23</text>
+        <text font-size="10" font-family="JetBrains Mono,monospace" fill="#9B7FFF" text-anchor="middle" x="420" y="22">Q3=24</text>
+        <text class="ax-lbl" text-anchor="middle" x="510" y="22">máx 25</text>
+        <text class="no-out" fill="#9B7FFF" font-family="JetBrains Mono,monospace" text-anchor="middle" x="270" y="108">✓ Sin outliers — rango muy compacto (20–25 años)</text>
+      </svg>
+    </div>
+
+    <div class="explain">Las edades están entre 20 y 25 años — una muestra muy homogénea. Hay un ligero valle en 21 y 23 años y picos en 22, 24 y 25. No hay outliers. Esta variable no aportará mucha variabilidad a los análisis de correlación.</div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+  function show(name, el) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    el.classList.add('active');
+  }
+</script>
+</body>
+</html>
